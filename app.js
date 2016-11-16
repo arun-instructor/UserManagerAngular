@@ -24,6 +24,7 @@ app.config(function($routeProvider) {
 });
 
 app.controller("UsersController", function($http, AuthService) {
+    AuthService.isAuthenticated();
     //Step 1: Make HTTP request to Rails API to retrieve list of users (Hint: look up the $http service)
     //Step 2: Use Angular's template syntax to display the users
 
@@ -62,6 +63,8 @@ app.controller("UsersController", function($http, AuthService) {
 });
 
 app.controller("EditUserController", function($http, $location, $routeParams, AuthService) {
+    AuthService.isAuthenticated();
+
     var vm = this;
 
     //Pull specific user and insert into edit form
@@ -121,7 +124,7 @@ app.controller("LoginController", function($http, $location, AuthService) {
     }
 });
 
-app.service("AuthService", function() {
+app.service("AuthService", function($location) {
     this.setSession = function(user) {
         return localStorage.setItem("current_user", JSON.stringify(user));
     }
@@ -133,5 +136,13 @@ app.service("AuthService", function() {
 
     this.currentUser = function() {
         return JSON.parse(localStorage.getItem("current_user"));
+    }
+
+    this.isAuthenticated = function() {
+        if (this.currentUser()) {
+            return;
+        } else {
+            $location.path("/login");
+        }
     }
 });
