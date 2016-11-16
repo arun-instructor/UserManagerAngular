@@ -3,6 +3,11 @@ var app = angular.module("userApp", ["ngRoute"]);
 //Configure routes
 app.config(function($routeProvider) {
     $routeProvider
+        .when("/login", {
+            templateUrl: "templates/login.html",
+            controller: "LoginController",
+            controllerAs: "loginCtrl"
+        })
         .when("/users", {
             templateUrl: "templates/user-list.html",
             controller: "UsersController",
@@ -18,7 +23,7 @@ app.config(function($routeProvider) {
         });
 });
 
-app.controller("UsersController", function($http) {
+app.controller("UsersController", function($http, AuthService) {
     //Step 1: Make HTTP request to Rails API to retrieve list of users (Hint: look up the $http service)
     //Step 2: Use Angular's template syntax to display the users
 
@@ -26,7 +31,10 @@ app.controller("UsersController", function($http) {
 
     $http({
         method: "GET",
-        url: "http://localhost:3000/users"
+        url: "http://localhost:3000/users",
+        headers: {
+            "Authorization": "Token token=" + AuthService.getToken()
+        }
     }).success(function(users) {
         vm.users = users;
     }).error(function() {
@@ -53,13 +61,16 @@ app.controller("UsersController", function($http) {
     }
 });
 
-app.controller("EditUserController", function($http, $location, $routeParams) {
+app.controller("EditUserController", function($http, $location, $routeParams, AuthService) {
     var vm = this;
 
     //Pull specific user and insert into edit form
     $http({
         method: "GET",
-        url: "http://localhost:3000/users/" + $routeParams.id + "/edit"
+        url: "http://localhost:3000/users/" + $routeParams.id + "/edit",
+        headers: {
+            "Authorization": "Token token=" + AuthService.getToken()
+        }
     }).success(function(user) {
         vm.user = user;
     }).error(function() {
@@ -75,11 +86,52 @@ app.controller("EditUserController", function($http, $location, $routeParams) {
             url: "http://localhost:3000/users/" + $routeParams.id,
             data: {
                 user: vm.user
+            },
+            headers: {
+                "Authorization": "Token token=" + AuthService.getToken()
             }
         }).success(function() {
             $location.path("/users");
         }).error(function() {
             alert("Error updating user");
         });
+    }
+});
+
+app.controller("LoginController", function($http, $location, AuthService) {
+    var vm = this;
+
+    vm.loginUser = function(event) {
+        event.preventDefault();
+
+        //Step 1: Retrieve user details based on form values
+        //Step 2: Perform HTTP request to login endpoint
+        //Step 3: Save user details somehow
+
+        $http({
+            method: "POST",
+            url: "http://localhost:3000/login",
+            data: vm.user
+        }).success(function(user) {
+            AuthService.setSession(user);
+            $location.path("/users");
+        }).error(function() {
+            alert("Unauthorized!");
+        });
+    }
+});
+
+app.service("AuthService", function() {
+    this.setSession = function(user) {
+        return localStorage.setItem("current_user", JSON.stringify(user));
+    }
+
+    this.getToken = function() {
+        var currentUser = JSON.parse(localStorage.getItem("current_user"));
+        return currentUser.auth_token;
+    }
+
+    this.currentUser = function() {
+        return JSON.parse(localStorage.getItem("current_user"));
     }
 });
